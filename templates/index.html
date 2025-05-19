@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flower Recognition</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='Main.css') }}">
+
+</head>
+<body>
+    <main>
+        <section id="heading">
+            <h1>Flower Classification CNN Model</h1>
+            <p>Upload & Classify</p>
+        </section>
+
+        <section id="details">
+            <h2>Drag & Drop a photo or Browse to select an image</h2>
+            <p>[Note: Supports .jpg, .png files up to 200MB]</p>
+        </section>
+
+        <section id="upload-bar">
+            <img id="previewImage" src="" alt="Preview Image" style="display:none; width: 200px;">
+            <h2>Image Upload - Drag or Drop a file here</h2>
+            <input type="file" id="imageInput" name="file" accept="image/*" hidden>
+            <input type="file" id="InputImg" accept="image/*" hidden>
+            <button type="button" onclick="document.getElementById('imageInput').click()">Browse Files</button>
+        </section>
+
+        <section id="results" style="display:none;">
+            <h2>Results:</h2>
+            <button type="button" onclick="document.getElementById('results').style.display='none'">Close</button>
+            <img id="resultImage" src="" alt="Classified Image" style="width: 200px;">
+            <p id="predictionText"></p>
+            <p id="confidenceText"></p>
+            <button type="button">View Details</button>
+        </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+</body>
+</html>
