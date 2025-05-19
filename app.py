@@ -1,40 +1,60 @@
-import os
-import keras
+from flask import Flask, render_template, request, jsonify
 from keras.models import load_model
-import streamlit as st 
 import tensorflow as tf
 import numpy as np
+import os
+from werkzeug.utils import secure_filename
 
-st.markdown('<h1 style="text-align:center; font-size:2.5em;">Flower Classification CNN Model</h1>', unsafe_allow_html=True)
+# === Flask Setup ===
+BASE_DIR = r"C:\Users\vsure\.vscode\AIML\Flower Recognization CNN Model\.ipynb_checkpoints"
+app = Flask(__name__, static_folder='static', template_folder='templates')
+app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'uploads')
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+# === Load Model ===
+model_path = os.path.join(BASE_DIR, 'Flower_Recog_Model.h5')
+model = load_model(model_path)
 flower_names = ['daisy', 'dandelion', 'rose', 'sunflower', 'tulip']
 
-model = load_model(r'C:\Users\vsure\.vscode\AIML\Flower Recognization CNN Model\.ipynb_checkpoints\Flower_Recog_Model.h5')
-
-def classify_images(image_path):
-    input_image = tf.keras.utils.load_img(image_path, target_size=(180,180))
-    input_image_array = tf.keras.utils.img_to_array(input_image)
-    input_image_exp_dim = tf.expand_dims(input_image_array,0)
-
-    predictions = model.predict(input_image_exp_dim)
-    result = tf.nn.softmax(predictions[0])
-    flower = flower_names[np.argmax(result)]
+# === Helper Function to Classify ===
+def classify_image(image_path):
+    image = tf.keras.utils.load_img(image_path, target_size=(180, 180))
+    img_array = tf.keras.utils.img_to_array(image)
+    img_expanded = tf.expand_dims(img_array, 0)
+    prediction = model.predict(img_expanded)
+    result = tf.nn.softmax(prediction[0])
+    label = flower_names[np.argmax(result)]
     confidence = np.max(result) * 100
-    # Styled card output
-    card_html = f'''
-    <div style="background-color:#f8f9ff; border-radius:16px; padding:24px; width:340px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
-        <div style="font-size:2em; margin-bottom:8px; color:#6c63ff;">&#9728;&#65039;</div>
-        <div style="font-size:1.5em; font-weight:600; color:#222;">{flower.capitalize()}</div>
-        <div style="color:#888; font-size:1.1em; margin-bottom:16px;">Confidence: {confidence:.2f}%</div>
-        <a href="#" style="display:inline-block; background:#6c63ff; color:#fff; padding:8px 20px; border-radius:8px; text-decoration:none; font-weight:500;">View Details</a>
-    </div>
-    '''
-    return card_html
+    return label.capitalize(), confidence
 
-uploaded_file = st.file_uploader('Upload an Image')
-if uploaded_file is not None:
-    with open(os.path.join(r'C:\Users\vsure\.vscode\AIML\Flower Recognization CNN Model\.ipynb_checkpoints\upload', uploaded_file.name), 'wb') as f:
-        f.write(uploaded_file.getbuffer())
-    
-    st.image(uploaded_file, width = 200)
-    st.markdown(classify_images(uploaded_file), unsafe_allow_html=True)
+# === Routes ===
+@app.route('/')
+def index():
+    return render_template('index.html')
 
+@app.route('/predict', methods=['POST'])
+def predict():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+
+    filename = secure_filename(file.filename)
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
+
+    try:
+        label, confidence = classify_image(filepath)
+        os.remove(filepath)  # Clean up
+        return jsonify({
+            'flower': label,
+            'confidence': f'{confidence:.2f}%'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# === Run App ===
+if __name__ == '__main__':
+    app.run(debug=True)
